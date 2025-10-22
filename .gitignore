@@ -1,0 +1,10 @@
+node_modules/
+.next/
+out/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+# pnpm store is global, but just in case
+.pnpm-store/
+.DS_Store
