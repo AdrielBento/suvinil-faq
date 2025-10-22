@@ -18,7 +18,7 @@ export type FaqMode =
 type FaqState = {
   title: string;
   subtitle?: string;
-  items: { question: string; category: string }[];
+  items: { question: string; href: string }[];
 };
 
 export default function HomePage() {
@@ -36,15 +36,21 @@ export default function HomePage() {
       return {
         title: category.title,
         subtitle: category.questions.length ? 'Dúvidas relacionadas' : undefined,
-        items: category.questions.map((question) => ({ question, category: category.id }))
+        items: category.questions.map((question) => ({
+          question: question.question,
+          href: `/questions/${question.slug}`
+        }))
       };
     }
 
     const query = faqMode.query.toLowerCase();
     const matches = categories.flatMap((category) =>
       category.questions
-        .filter((question) => question.toLowerCase().includes(query))
-        .map((question) => ({ question, category: category.id }))
+        .filter((question) => question.question.toLowerCase().includes(query))
+        .map((question) => ({
+          question: question.question,
+          href: `/questions/${question.slug}`
+        }))
     );
     return {
       title: 'Resultados da busca',
@@ -94,14 +100,6 @@ export default function HomePage() {
     [scrollToFaq]
   );
 
-  const handleQuestionSelect = React.useCallback(
-    (question: string) => {
-      const query = encodeURIComponent(question);
-      router.push(`/chat?query=${query}`);
-    },
-    [router]
-  );
-
   const handleGoToChat = React.useCallback(() => {
     router.push('/chat');
   }, [router]);
@@ -133,12 +131,7 @@ export default function HomePage() {
           <HeroSection quickSearches={quickSearches} onQuickSearch={handleQuickSearch} />
           <CategorySection categories={categories} onSelectCategory={handleCategorySelect} />
           <div ref={faqRef} className="scroll-mt-24">
-            <FaqSection
-              title={faqState.title}
-              subtitle={faqState.subtitle}
-              items={faqState.items}
-              onQuestionSelect={handleQuestionSelect}
-            />
+            <FaqSection title={faqState.title} subtitle={faqState.subtitle} items={faqState.items} />
           </div>
           <ContactSection onChatClick={handleGoToChat} />
         </div>
