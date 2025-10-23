@@ -34,9 +34,6 @@ export function CategorySection({ categories }: CategorySectionProps) {
                 <h3 className="text-lg font-semibold">{category.title}</h3>
                 <p className="text-sm text-muted-foreground">{category.description}</p>
               </div>
-              <span className="text-sm font-medium text-primary underline-offset-2 hover:underline">
-                Abrir página da categoria
-              </span>
             </Link>
           </Button>
         ))}
