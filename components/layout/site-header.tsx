@@ -73,8 +73,7 @@ export function SiteHeader({
               </svg>
             </div>
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wider text-primary">Suvinil</p>
-              <p className="text-base font-semibold leading-tight">Central de Ajuda</p>
+              <p className="text-sm font-semibold uppercase tracking-wider text-primary">FAQ</p>
             </div>
           </Link>
         </div>
