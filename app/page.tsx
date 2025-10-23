@@ -5,62 +5,37 @@ import { useRouter } from 'next/navigation';
 
 import { ContactSection } from '@/components/home/contact-section';
 import { CategorySection } from '@/components/home/category-section';
-import { FaqSection } from '@/components/home/faq-section';
 import { HeroSection } from '@/components/home/hero-section';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { SiteHeader } from '@/components/layout/site-header';
 import { categories, quickSearches } from '@/lib/data';
 
-export type FaqMode =
-  | { type: 'category'; categoryId: string }
-  | { type: 'search'; query: string };
-
-type FaqState = {
-  title: string;
-  subtitle?: string;
-  items: { question: string; href: string }[];
-};
-
 export default function HomePage() {
   const router = useRouter();
-  const defaultCategory = categories[0];
-  const [faqMode, setFaqMode] = React.useState<FaqMode>({ type: 'category', categoryId: defaultCategory.id });
   const [searchTerm, setSearchTerm] = React.useState('');
-
-  const faqRef = React.useRef<HTMLDivElement | null>(null);
+  const [searchError, setSearchError] = React.useState<string | null>(null);
   const searchInputRef = React.useRef<HTMLInputElement | null>(null);
 
-  const faqState = React.useMemo<FaqState>(() => {
-    if (faqMode.type === 'category') {
-      const category = categories.find((item) => item.id === faqMode.categoryId) ?? defaultCategory;
-      return {
-        title: category.title,
-        subtitle: category.questions.length ? 'Dúvidas relacionadas' : undefined,
-        items: category.questions.map((question) => ({
-          question: question.question,
-          href: `/questions/${question.slug}`
-        }))
-      };
+  const handleSearchTermChange = React.useCallback(
+    (value: string) => {
+      setSearchTerm(value);
+      if (searchError) {
+        setSearchError(null);
+      }
+    },
+    [searchError]
+  );
+
+  const findQuestionByQuery = React.useCallback((query: string) => {
+    const normalized = query.toLowerCase();
+    for (const category of categories) {
+      for (const question of category.questions) {
+        if (question.question.toLowerCase().includes(normalized)) {
+          return question;
+        }
+      }
     }
-
-    const query = faqMode.query.toLowerCase();
-    const matches = categories.flatMap((category) =>
-      category.questions
-        .filter((question) => question.question.toLowerCase().includes(query))
-        .map((question) => ({
-          question: question.question,
-          href: `/questions/${question.slug}`
-        }))
-    );
-    return {
-      title: 'Resultados da busca',
-      subtitle: `${matches.length} resultado(s)`,
-      items: matches
-    };
-  }, [defaultCategory, faqMode]);
-
-  const scrollToFaq = React.useCallback(() => {
-    faqRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return null;
   }, []);
 
   const handleSearchSubmit = React.useCallback(
@@ -69,35 +44,45 @@ export default function HomePage() {
       const value = searchTerm.trim();
       if (!value) {
         searchInputRef.current?.focus();
+        setSearchError('Digite um termo para pesquisar.');
         return;
       }
-      setFaqMode({ type: 'search', query: value });
-      scrollToFaq();
+      const match = findQuestionByQuery(value);
+      if (match) {
+        setSearchError(null);
+        router.push(`/questions/${match.slug}`);
+        return;
+      }
+      setSearchError('Nenhuma pergunta encontrada para sua pesquisa.');
+      searchInputRef.current?.select();
     },
-    [scrollToFaq, searchTerm]
+    [findQuestionByQuery, router, searchTerm]
   );
 
   const handleQuickSearch = React.useCallback(
     (value: string) => {
-      const category = categories.find((cat) => cat.id === value);
+      const normalized = value.toLowerCase();
+      const category = categories.find(
+        (cat) => cat.id.toLowerCase() === normalized || cat.title.toLowerCase() === normalized
+      );
       if (category) {
-        setFaqMode({ type: 'category', categoryId: category.id });
-      } else {
-        setFaqMode({ type: 'search', query: value });
+        setSearchError(null);
+        router.push(`/categories/${category.slug}`);
+        return;
       }
-      setSearchTerm(value);
-      scrollToFaq();
-    },
-    [scrollToFaq]
-  );
 
-  const handleCategorySelect = React.useCallback(
-    (categoryId: string) => {
-      setFaqMode({ type: 'category', categoryId });
-      setSearchTerm('');
-      scrollToFaq();
+      const match = findQuestionByQuery(value);
+      if (match) {
+        setSearchError(null);
+        router.push(`/questions/${match.slug}`);
+        return;
+      }
+
+      setSearchTerm(value);
+      setSearchError('Nenhum resultado encontrado para a busca selecionada.');
+      searchInputRef.current?.focus();
     },
-    [scrollToFaq]
+    [findQuestionByQuery, router]
   );
 
   const handleGoToChat = React.useCallback(() => {
@@ -121,18 +106,20 @@ export default function HomePage() {
         variant="home"
         searchTerm={searchTerm}
         searchInputRef={searchInputRef}
-        onSearchTermChange={setSearchTerm}
+        onSearchTermChange={handleSearchTermChange}
         onSearchSubmit={handleSearchSubmit}
         onPrimaryAction={handleGoToChat}
       />
 
       <div className="flex-1 bg-gradient-to-b from-background via-background to-background/60">
         <div className="container flex flex-col gap-12 py-12">
+          {searchError ? (
+            <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {searchError}
+            </div>
+          ) : null}
           <HeroSection quickSearches={quickSearches} onQuickSearch={handleQuickSearch} />
-          <CategorySection categories={categories} onSelectCategory={handleCategorySelect} />
-          <div ref={faqRef} className="scroll-mt-24">
-            <FaqSection title={faqState.title} subtitle={faqState.subtitle} items={faqState.items} />
-          </div>
+          <CategorySection categories={categories} />
           <ContactSection onChatClick={handleGoToChat} />
         </div>
       </div>
