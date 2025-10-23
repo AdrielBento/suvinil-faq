@@ -109,7 +109,7 @@ export function SiteHeader({
         <div className="flex flex-col gap-3 md:max-w-xl">
           <Link href="/" className="flex items-center gap-3" aria-label="Página inicial da Suvinil">
             <div className="relative h-10 w-28">
-              <Image src="/suvinil-logo.png" alt="Logotipo da Suvinil" fill className="object-contain" sizes="112px" priority />
+              <Image src="/suvinil-logo.svg" alt="Logotipo da Suvinil" fill className="object-contain" sizes="112px" priority />
             </div>
             <div>
               <p className="text-sm font-semibold uppercase tracking-wider text-primary">Suvinil</p>
