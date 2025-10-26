@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 const THREADS_KEY = 'suv-threads-v2';
 const ACTIVE_KEY = 'suv-active-thread';
 
-const CHAT_API_URL = process.env.NEXT_PUBLIC_CHAT_API_URL ?? 'http://localhost:3333/api/chat';
+const CHAT_API_URL = process.env.NEXT_PUBLIC_CHAT_API_URL ?? 'http://localhost:3000/rag/ask';
 const CHAT_API_HEADERS = parseHeaders(process.env.NEXT_PUBLIC_CHAT_API_HEADERS);
 const CHAT_API_CREDENTIALS = process.env.NEXT_PUBLIC_CHAT_API_CREDENTIALS as RequestCredentials | undefined;
 
@@ -189,8 +189,8 @@ function migrateStoredThread(thread: StoredThreadV1 | StoredThreadV2): ChatThrea
 function createTransport() {
   return new DefaultChatTransport({
     api: CHAT_API_URL,
-    headers: CHAT_API_HEADERS,
-    credentials: CHAT_API_CREDENTIALS,
+    // headers: CHAT_API_HEADERS,
+    // credentials: CHAT_API_CREDENTIALS,
     prepareSendMessagesRequest: ({ api, id, messages, body, headers, credentials }: any) => {
       const plainMessages = messages
         .filter((message: UIMessage) => message.role === 'assistant' || message.role === 'user')
@@ -206,7 +206,7 @@ function createTransport() {
         body: {
           ...body,
           id,
-          messages: plainMessages
+          message: plainMessages?.at(plainMessages?.length - 1)?.content
         }
       };
     }
