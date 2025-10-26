@@ -73,23 +73,27 @@ export default function QuestionPage({ params }: QuestionPageProps) {
           </article>
 
           <QuestionEngagement questionSlug={question.slug} />
-
           {relatedQuestions.length ? (
             <section className="space-y-3" aria-labelledby="related-questions">
               <h2 id="related-questions" className="text-xl font-semibold">
                 Veja também
               </h2>
-              <div className="grid grid-cols-1 gap-3 sm:[grid-template-columns:repeat(auto-fit,minmax(16rem,1fr))]">
+              <div className="flex flex-col gap-3">
                 {relatedQuestions.map((item) => (
                   <Button
                     key={item.id}
                     type="button"
                     variant="outline"
                     asChild
-                    className="justify-start self-start rounded-2xl border border-border/70 bg-background px-4 py-3 text-left text-sm font-medium leading-snug shadow-sm transition hover:border-primary/60 hover:shadow-md"
+                    className="group h-auto w-full justify-start rounded-2xl border border-border/70 bg-background p-0 text-left shadow-sm transition hover:border-primary/60 hover:shadow-md"
                   >
-                    <Link href={`/questions/${item.slug}`} className="block break-words leading-snug">
-                      {item.question}
+                    <Link 
+                      href={`/questions/${item.slug}`} 
+                      className="flex w-full items-center justify-between gap-3 px-4 py-3"
+                    >
+                      <span className="text-sm font-medium leading-snug text-foreground">
+                        {item.question}
+                      </span>
                     </Link>
                   </Button>
                 ))}
