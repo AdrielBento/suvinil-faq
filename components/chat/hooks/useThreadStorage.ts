@@ -44,7 +44,7 @@ export function useThreadStorage(isHydrated: boolean) {
       const stored = localStorage.getItem(THREADS_KEY);
       const active = localStorage.getItem(ACTIVE_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored) as Array<StoredThreadV1 | StoredThreadV2>;
+        const parsed = JSON.parse(stored) as (StoredThreadV1 | StoredThreadV2)[];
         const migrated = parsed.map((thread) => migrateStoredThread(thread));
         setThreads(migrated);
         if (active && migrated.some((thread) => thread.id === active)) {
