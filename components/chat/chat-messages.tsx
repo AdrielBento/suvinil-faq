@@ -88,7 +88,20 @@ function renderMessageContent(message: UIMessage, typingState: TypingState | nul
   }
 
   if (!message.parts.length) {
-    return <p className="text-xs text-muted-foreground">(sem conteúdo)</p>;
+    return (
+      <div className="flex items-center gap-1 text-muted-foreground">
+        <span className="sr-only">Digitando…</span>
+        {[0, 1, 2].map((dot) => (
+          <span
+            // eslint-disable-next-line react/no-array-index-key
+            key={dot}
+            className="h-1.5 w-1.5 rounded-full bg-current animate-bounce"
+            style={{ animationDelay: `${dot * 0.2}s` }}
+            aria-hidden="true"
+          />
+        ))}
+      </div>
+    );
   }
 
   return message.parts.map((part, index) => {
@@ -98,7 +111,6 @@ function renderMessageContent(message: UIMessage, typingState: TypingState | nul
           key={`${message.id}-text-${index}`}
           remarkPlugins={markdownRemarkPlugins}
           components={markdownComponents}
-          className="space-y-2 break-words"
         >
           {part.text}
         </ReactMarkdown>
