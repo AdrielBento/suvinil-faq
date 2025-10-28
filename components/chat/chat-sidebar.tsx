@@ -44,8 +44,8 @@ export function ChatSidebar({
   }, [filter, threads]);
 
   return (
-    <Card className="border-border/80 bg-card/80">
-      <CardHeader className="space-y-4">
+    <Card className="flex h-full flex-col border-border/80 bg-card/80">
+      <CardHeader className="shrink-0 space-y-4">
         <CardTitle className="flex items-center justify-between text-lg font-semibold">
           Conversas
           <Button type="button" size="sm" className="gap-2" onClick={onCreateThread}>
@@ -60,7 +60,7 @@ export function ChatSidebar({
           aria-label="Buscar conversa"
         />
       </CardHeader>
-      <CardContent className="space-y-2 overflow-y-auto pr-2">
+      <CardContent className="flex-1 space-y-2 overflow-y-auto pr-2">
         {filteredThreads.length ? (
           <nav className="flex flex-col gap-2" role="list">
             {filteredThreads.map((thread) => {

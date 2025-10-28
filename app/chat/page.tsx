@@ -18,9 +18,11 @@ export default function ChatPage() {
     <main className="flex flex-1 flex-col">
       <SiteHeader variant="chat" onPrimaryAction={handleBackToHelpCenter} />
       <div className="flex-1 bg-gradient-to-b from-background via-background to-background/60">
-        <div className="container py-12">
+        <div className="container flex flex-1 flex-col py-12">
           <React.Suspense fallback={<div className="text-sm text-muted-foreground">Carregando chat…</div>}>
-            <ChatApp />
+            <div className="flex flex-1">
+              <ChatApp />
+            </div>
           </React.Suspense>
         </div>
       </div>
