@@ -62,37 +62,37 @@ export function ChatSidebar({
       </CardHeader>
       <CardContent className="flex-1 space-y-2 overflow-y-auto pr-2">
         {filteredThreads.length ? (
-          <nav className="flex flex-col gap-2" role="list">
-            {filteredThreads.map((thread) => {
+          <nav aria-label="Conversas recentes">
+            <ul className="flex flex-col gap-2">
+              {filteredThreads.map((thread) => {
               const count = thread.messages.length;
               const lastRole = thread.messages[count - 1]?.role ?? 'assistant';
               const who = lastRole === 'assistant' ? 'assistente' : 'você';
               const stamp = new Date(thread.updatedAt || thread.createdAt).toLocaleString('pt-BR');
               const isActive = thread.id === activeThreadId;
               return (
-                <button
-                  key={thread.id}
-                  type="button"
-                  onClick={() => onSelectThread(thread.id)}
-                  className={cn(
-                    'group flex w-full items-start justify-between gap-3 rounded-xl border border-transparent bg-muted/40 p-3 text-left transition hover:border-primary/40 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                    isActive && 'border-primary/70 bg-primary/10'
-                  )}
-                  role="listitem"
-                >
-                  <div className="min-w-0 space-y-1">
-                    <p className="truncate text-sm font-semibold text-foreground">{thread.title || 'Conversa'}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {count} msg{count !== 1 ? 's' : ''} • último: {who} • {stamp}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="shrink-0">
-                      {count}
-                    </Badge>
-                    <div className="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
-                      <Button
-                        type="button"
+                <li key={thread.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectThread(thread.id)}
+                    className={cn(
+                      'group flex w-full items-start justify-between gap-3 rounded-xl border border-transparent bg-muted/40 p-3 text-left transition hover:border-primary/40 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                      isActive && 'border-primary/70 bg-primary/10'
+                    )}
+                  >
+                    <div className="min-w-0 space-y-1">
+                      <p className="truncate text-sm font-semibold text-foreground">{thread.title || 'Conversa'}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {count} msg{count !== 1 ? 's' : ''} • último: {who} • {stamp}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="shrink-0">
+                        {count}
+                      </Badge>
+                      <div className="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                        <Button
+                          type="button"
                         size="icon"
                         variant="ghost"
                         className="h-8 w-8"
@@ -119,9 +119,11 @@ export function ChatSidebar({
                       </Button>
                     </div>
                   </div>
-                </button>
+                  </button>
+                </li>
               );
             })}
+            </ul>
           </nav>
         ) : (
           <p className="text-sm text-muted-foreground">Nenhuma conversa encontrada.</p>
