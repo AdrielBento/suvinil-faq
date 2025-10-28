@@ -1,11 +1,81 @@
 import * as React from 'react';
 import { CircleAlert, Loader2 } from 'lucide-react';
 import type { UIMessage } from '@ai-sdk/react';
+import ReactMarkdown from 'react-markdown';
+import type { Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 import type { TypingState } from './types';
+
+const markdownComponents: Components = {
+  p: ({ node: _node, ...props }) => (
+    <p className="whitespace-pre-wrap leading-relaxed [&:not(:first-child)]:mt-2" {...props} />
+  ),
+  ul: ({ node: _node, ...props }) => (
+    <ul className="my-2 list-disc space-y-1 pl-5" {...props} />
+  ),
+  ol: ({ node: _node, ...props }) => (
+    <ol className="my-2 list-decimal space-y-1 pl-5" {...props} />
+  ),
+  li: ({ node: _node, ...props }) => <li className="leading-relaxed" {...props} />,
+  blockquote: ({ node: _node, ...props }) => (
+    <blockquote
+      className="my-3 border-l-2 border-primary/40 pl-3 text-muted-foreground"
+      {...props}
+    />
+  ),
+  a: ({ node: _node, ...props }) => (
+    <a
+      className="font-medium text-primary underline underline-offset-4 hover:text-primary/80"
+      target="_blank"
+      rel="noreferrer"
+      {...props}
+    />
+  ),
+  img: ({ node: _node, alt, ...props }) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      alt={alt ?? ''}
+      className="my-3 max-h-64 w-auto rounded-lg border border-border/50"
+      loading="lazy"
+      {...props}
+    />
+  ),
+  code: ({ node: _node, inline, className, children, ...props }) => {
+    if (inline) {
+      return (
+        <code className="rounded bg-muted px-1 py-[2px] font-mono text-[0.85em]" {...props}>
+          {children}
+        </code>
+      );
+    }
+
+    const codeContent = React.Children.toArray(children).join('').replace(/\n$/, '');
+
+    return (
+      <pre className="my-3 overflow-x-auto rounded-md bg-muted/60 p-3 text-xs">
+        <code className={cn('block font-mono', className)} {...props}>
+          {codeContent}
+        </code>
+      </pre>
+    );
+  },
+  hr: () => <hr className="my-4 border-border/60" />,
+  table: ({ node: _node, ...props }) => (
+    <div className="my-3 overflow-x-auto">
+      <table className="w-full border-collapse text-left text-sm" {...props} />
+    </div>
+  ),
+  th: ({ node: _node, ...props }) => (
+    <th className="border border-border/60 bg-muted/40 px-2 py-1 font-semibold" {...props} />
+  ),
+  td: ({ node: _node, ...props }) => <td className="border border-border/60 px-2 py-1" {...props} />
+};
+
+const markdownRemarkPlugins = [remarkGfm];
 
 function renderMessageContent(message: UIMessage, typingState: TypingState | null) {
   if (message.role === 'assistant' && typingState && typingState.id === message.id) {
@@ -24,9 +94,14 @@ function renderMessageContent(message: UIMessage, typingState: TypingState | nul
   return message.parts.map((part, index) => {
     if (part.type === 'text') {
       return (
-        <p key={`${message.id}-text-${index}`} className="whitespace-pre-wrap">
+        <ReactMarkdown
+          key={`${message.id}-text-${index}`}
+          remarkPlugins={markdownRemarkPlugins}
+          components={markdownComponents}
+          className="space-y-2 break-words"
+        >
           {part.text}
-        </p>
+        </ReactMarkdown>
       );
     }
 

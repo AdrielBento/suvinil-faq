@@ -208,7 +208,7 @@ export function ChatApp() {
   );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
+    <div className="grid h-full min-h-[520px] gap-6 lg:grid-cols-[320px,1fr]">
       <ChatSidebar
         threads={threads}
         activeThreadId={activeThreadId}
@@ -220,9 +220,9 @@ export function ChatApp() {
         onDeleteThread={handleDeleteThread}
       />
 
-      <Card className="flex min-h-[520px] flex-col border-border/80 bg-card/80">
+      <Card className="flex h-full min-h-[520px] flex-col border-border/80 bg-card/80">
         <ChatHeader isResponding={isResponding} />
-        <CardContent className="flex flex-1 flex-col gap-4 p-0">
+        <CardContent className="flex flex-1 flex-col gap-4 overflow-hidden p-0">
           <ChatMessages
             messages={messages}
             typingState={typingState}
