@@ -7,6 +7,37 @@ import { useChat } from '@ai-sdk/react';
 import type { UIMessage } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 
+function createRequestId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  const randomValues = (() => {
+    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+      return crypto.getRandomValues(new Uint8Array(16));
+    }
+
+    const values = new Uint8Array(16);
+    for (let index = 0; index < values.length; index += 1) {
+      values[index] = Math.floor(Math.random() * 256);
+    }
+    return values;
+  })();
+
+  randomValues[6] = (randomValues[6] & 0x0f) | 0x40;
+  randomValues[8] = (randomValues[8] & 0x3f) | 0x80;
+
+  const segments = [
+    Array.from(randomValues.slice(0, 4), (value) => value.toString(16).padStart(2, '0')).join(''),
+    Array.from(randomValues.slice(4, 6), (value) => value.toString(16).padStart(2, '0')).join(''),
+    Array.from(randomValues.slice(6, 8), (value) => value.toString(16).padStart(2, '0')).join(''),
+    Array.from(randomValues.slice(8, 10), (value) => value.toString(16).padStart(2, '0')).join(''),
+    Array.from(randomValues.slice(10, 16), (value) => value.toString(16).padStart(2, '0')).join('')
+  ];
+
+  return segments.join('-');
+}
+
 import { Card, CardContent } from '@/components/ui/card';
 import { chatSuggestions } from '@/lib/data';
 
@@ -28,7 +59,7 @@ function createTransport() {
     api: CHAT_API_URL,
     headers: CHAT_API_HEADERS,
     credentials: CHAT_API_CREDENTIALS,
-    prepareSendMessagesRequest: ({ api, id, messages, body, headers, credentials }: any) => {
+    prepareSendMessagesRequest: ({ api, messages, body, headers, credentials }: any) => {
       const plainMessages = (messages as UIMessage[])
         .filter((message) => message.role === 'assistant' || message.role === 'user')
         .map((message) => ({
@@ -42,7 +73,7 @@ function createTransport() {
         credentials,
         body: {
           ...body,
-          id,
+          id: createRequestId(),
           message: plainMessages?.at(plainMessages?.length - 1)?.content
         }
       };

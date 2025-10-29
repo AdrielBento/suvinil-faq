@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { CircleAlert, Loader2 } from 'lucide-react';
+import { BookOpenCheck, CircleAlert, Link as LinkIcon, Loader2 } from 'lucide-react';
 import type { UIMessage } from '@ai-sdk/react';
 import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
@@ -76,6 +76,167 @@ const markdownComponents: Components = {
 };
 
 const markdownRemarkPlugins = [remarkGfm];
+
+type MessageSource = {
+  id: string;
+  title: string;
+  url?: string;
+  displayUrl?: string;
+  snippet?: string;
+};
+
+function normalizeSourceCandidate(candidate: unknown, index: number): MessageSource | null {
+  if (!candidate || typeof candidate !== 'object') {
+    return null;
+  }
+
+  const data = candidate as Record<string, unknown>;
+
+  const urlValue = data.url ?? data.href ?? data.link ?? data.sourceUrl ?? data.website;
+  const url = typeof urlValue === 'string' && urlValue.trim() ? urlValue.trim() : undefined;
+
+  const titleValue =
+    data.title ??
+    data.name ??
+    data.label ??
+    data.fileName ??
+    data.filename ??
+    data.heading ??
+    data.displayName ??
+    data.source ??
+    data.pageTitle;
+  const title = typeof titleValue === 'string' && titleValue.trim() ? titleValue.trim() : undefined;
+
+  const snippetValue = data.snippet ?? data.summary ?? data.description ?? data.text ?? data.content;
+  const snippet = typeof snippetValue === 'string' && snippetValue.trim() ? snippetValue.trim() : undefined;
+
+  let displayUrl: string | undefined;
+  if (url) {
+    try {
+      const parsed = new URL(url);
+      displayUrl = parsed.hostname.replace(/^www\./, '');
+    } catch (error) {
+      displayUrl = undefined;
+    }
+  }
+
+  const fallbackTitle = title ?? displayUrl ?? (snippet ? snippet.slice(0, 40) : undefined);
+  if (!fallbackTitle) {
+    return {
+      id: `source-${index}`,
+      title: `Fonte ${index + 1}`
+    } satisfies MessageSource;
+  }
+
+  return {
+    id: url ?? fallbackTitle ?? `source-${index}`,
+    title: title ?? fallbackTitle,
+    url,
+    displayUrl,
+    snippet
+  } satisfies MessageSource;
+}
+
+function collectSourceCandidates(
+  value: unknown,
+  collector: (candidate: unknown) => void,
+  seen = new WeakSet<object>()
+) {
+  if (!value) return;
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectSourceCandidates(item, collector, seen));
+    return;
+  }
+
+  if (typeof value !== 'object') {
+    return;
+  }
+
+  const objectValue = value as Record<string, unknown>;
+  if (seen.has(objectValue)) {
+    return;
+  }
+  seen.add(objectValue);
+
+  collector(objectValue);
+
+  const nestedKeys = ['sources', 'source', 'citations', 'references', 'items', 'results', 'docs', 'attachments'];
+  nestedKeys.forEach((key) => {
+    if (key in objectValue) {
+      collectSourceCandidates(objectValue[key], collector, seen);
+    }
+  });
+}
+
+function extractMessageSources(message: UIMessage): MessageSource[] {
+  const rawCandidates: unknown[] = [];
+
+  const pushCandidate = (candidate: unknown) => {
+    if (candidate !== undefined && candidate !== null) {
+      rawCandidates.push(candidate);
+    }
+  };
+
+  const metadata = (message as any)?.metadata;
+  if (metadata && typeof metadata === 'object') {
+    collectSourceCandidates(metadata.sources, pushCandidate);
+    collectSourceCandidates(metadata.source, pushCandidate);
+    collectSourceCandidates(metadata.references, pushCandidate);
+    collectSourceCandidates(metadata.citations, pushCandidate);
+  }
+
+  const experimentalProviderMetadata = (message as any)?.experimental_providerMetadata;
+  if (experimentalProviderMetadata && typeof experimentalProviderMetadata === 'object') {
+    Object.values(experimentalProviderMetadata as Record<string, unknown>).forEach((providerMetadata) => {
+      collectSourceCandidates(providerMetadata, pushCandidate);
+    });
+  }
+
+  const annotations = (message as any)?.annotations;
+  if (Array.isArray(annotations)) {
+    annotations.forEach((annotation) => {
+      collectSourceCandidates(annotation, pushCandidate);
+    });
+  }
+
+  const parts = (message as any)?.parts;
+  if (Array.isArray(parts)) {
+    parts.forEach((part) => {
+      if (part && typeof part === 'object' && 'data' in part) {
+        collectSourceCandidates((part as Record<string, unknown>).data, pushCandidate);
+      }
+    });
+  }
+
+  const experimentalAttachments = (message as any)?.experimental_attachments;
+  if (experimentalAttachments) {
+    collectSourceCandidates(experimentalAttachments, pushCandidate);
+  }
+
+  const sources: MessageSource[] = [];
+  const seen = new Set<string>();
+
+  rawCandidates.forEach((candidate, index) => {
+    const normalized = normalizeSourceCandidate(candidate, index);
+    if (!normalized) return;
+
+    const key = normalized.url ?? normalized.title.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    sources.push({
+      ...normalized,
+      title: normalized.title || `Fonte ${sources.length + 1}`
+    });
+  });
+
+  return sources.map((source, index) => ({
+    ...source,
+    id: source.id || `source-${index}`,
+    title: source.title || `Fonte ${index + 1}`
+  }));
+}
 
 function renderMessageContent(message: UIMessage, typingState: TypingState | null) {
   if (message.role === 'assistant' && typingState && typingState.id === message.id) {
@@ -171,33 +332,87 @@ export function ChatMessages({
 }: ChatMessagesProps) {
   return (
     <div ref={chatBodyRef} className="flex-1 space-y-4 overflow-y-auto bg-muted/20 p-6">
-      {messages.map((message) => (
-        <div
-          key={message.id}
-          className={cn('flex items-start gap-3', message.role === 'user' ? 'justify-end' : 'justify-start')}
-        >
-          {message.role === 'assistant' ? (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/90 text-sm font-semibold text-primary-foreground shadow">
-              S
-            </div>
-          ) : null}
+      {messages.map((message) => {
+        const sources = message.role === 'assistant' ? extractMessageSources(message) : [];
+
+        return (
           <div
-            className={cn(
-              'max-w-[88%] rounded-2xl border px-4 py-3 text-sm shadow-sm sm:max-w-[75%]',
-              message.role === 'user'
-                ? 'rounded-br-none border-primary bg-primary text-primary-foreground'
-                : 'rounded-bl-none border-border/80 bg-background'
-            )}
+            key={message.id}
+            className={cn('flex items-start gap-3', message.role === 'user' ? 'justify-end' : 'justify-start')}
           >
-            {renderMessageContent(message, typingState)}
-          </div>
-          {message.role === 'user' ? (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground">
-              😊
+            {message.role === 'assistant' ? (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/90 text-sm font-semibold text-primary-foreground shadow">
+                S
+              </div>
+            ) : null}
+            <div
+              className={cn(
+                'max-w-[88%] rounded-2xl border px-4 py-3 text-sm shadow-sm sm:max-w-[75%]',
+                message.role === 'user'
+                  ? 'rounded-br-none border-primary bg-primary text-primary-foreground'
+                  : 'rounded-bl-none border-border/80 bg-background'
+              )}
+            >
+              {renderMessageContent(message, typingState)}
+              {sources.length ? (
+                <div className="mt-3 rounded-xl border border-border/60 bg-muted/20 p-3 text-xs">
+                  <div className="mb-2 flex items-center gap-2 font-semibold uppercase tracking-wide text-muted-foreground">
+                    <BookOpenCheck className="h-3.5 w-3.5" />
+                    Fontes
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {sources.map((source, index) => (
+                      <div key={source.id} className="flex flex-col gap-1">
+                        {source.url ? (
+                          <a
+                            href={source.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={cn(
+                              'group inline-flex items-center gap-2 rounded-lg border border-border/40 bg-background/90 px-3',
+                              'py-2 text-left text-xs font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/5'
+                            )}
+                          >
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
+                              <LinkIcon className="h-3.5 w-3.5" />
+                            </span>
+                            <span className="flex-1 truncate">{source.title || `Fonte ${index + 1}`}</span>
+                            {source.displayUrl ? (
+                              <span className="text-[10px] font-normal uppercase tracking-wider text-muted-foreground">
+                                {source.displayUrl}
+                              </span>
+                            ) : null}
+                          </a>
+                        ) : (
+                          <div
+                            className={cn(
+                              'inline-flex items-center gap-2 rounded-lg border border-border/40 bg-background/70 px-3',
+                              'py-2 text-left text-xs font-medium text-foreground'
+                            )}
+                          >
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary">
+                              <BookOpenCheck className="h-3.5 w-3.5" />
+                            </span>
+                            <span className="flex-1 truncate">{source.title || `Fonte ${index + 1}`}</span>
+                          </div>
+                        )}
+                        {source.snippet ? (
+                          <p className="pl-11 text-[11px] leading-relaxed text-muted-foreground">{source.snippet}</p>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
-          ) : null}
-        </div>
-      ))}
+            {message.role === 'user' ? (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground">
+                😊
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
       {isRequesting ? (
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/90 text-sm font-semibold text-primary-foreground shadow">
